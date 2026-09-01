@@ -17,6 +17,7 @@ pub struct Shaders {
     pub brightness_curve: Option<GlesTexProgram>,
     pub postprocess_and_clip: Option<GlesTexProgram>,
     pub resize: Option<ShaderProgram>,
+    pub resize_with_curve: Option<ShaderProgram>,
     pub gradient_fade: Option<GlesTexProgram>,
     pub blur: Option<BlurProgram>,
     pub custom_resize: RefCell<Option<ShaderProgram>>,
@@ -29,6 +30,7 @@ pub enum ProgramType {
     Border,
     Shadow,
     Resize,
+    ResizeCurve,
     Close,
     Open,
 }
@@ -147,9 +149,15 @@ impl Shaders {
             })
             .ok();
 
-        let resize = compile_resize_program(renderer, include_str!("resize.frag"))
+        let resize = compile_resize_program(renderer, include_str!("resize.frag"), false)
             .map_err(|err| {
                 warn!("error compiling resize shader: {err:?}");
+            })
+            .ok();
+
+        let resize_with_curve = compile_resize_program(renderer, include_str!("resize.frag"), true)
+            .map_err(|err| {
+                warn!("error compiling resize with curve shader: {err:?}");
             })
             .ok();
 
@@ -176,6 +184,7 @@ impl Shaders {
             brightness_curve,
             postprocess_and_clip,
             resize,
+            resize_with_curve,
             gradient_fade,
             blur,
             custom_resize: RefCell::new(None),
@@ -227,6 +236,7 @@ impl Shaders {
                 .borrow()
                 .clone()
                 .or_else(|| self.resize.clone()),
+            ProgramType::ResizeCurve => self.resize_with_curve.clone(),
             ProgramType::Close => self.custom_close.borrow().clone(),
             ProgramType::Open => self.custom_open.borrow().clone(),
         }
@@ -244,34 +254,40 @@ pub fn init(renderer: &mut GlesRenderer) {
 fn compile_resize_program(
     renderer: &mut GlesRenderer,
     src: &str,
+    curve: bool,
 ) -> Result<ShaderProgram, GlesError> {
     let mut program = include_str!("resize_prelude.frag").to_string();
     program.push_str(src);
     program.push_str(include_str!("resize_epilogue.frag"));
     program.push_str(include_str!("rounding_alpha.frag"));
+    if curve {
+        program.push_str(include_str!("brightness_curve.frag"));
+    } else {
+        program.push_str("\nvec4 postprocess(vec4 color) { return color; }\n");
+    }
 
-    ShaderProgram::compile(
-        renderer,
-        &program,
-        &[
-            UniformName::new("niri_input_to_curr_geo", UniformType::Matrix3x3),
-            UniformName::new("niri_curr_geo_to_prev_geo", UniformType::Matrix3x3),
-            UniformName::new("niri_curr_geo_to_next_geo", UniformType::Matrix3x3),
-            UniformName::new("niri_curr_geo_size", UniformType::_2f),
-            UniformName::new("niri_geo_to_tex_prev", UniformType::Matrix3x3),
-            UniformName::new("niri_geo_to_tex_next", UniformType::Matrix3x3),
-            UniformName::new("niri_progress", UniformType::_1f),
-            UniformName::new("niri_clamped_progress", UniformType::_1f),
-            UniformName::new("niri_corner_radius", UniformType::_4f),
-            UniformName::new("niri_clip_to_geometry", UniformType::_1f),
-        ],
-        &["niri_tex_prev", "niri_tex_next"],
-    )
+    let mut uniforms = vec![
+        UniformName::new("niri_input_to_curr_geo", UniformType::Matrix3x3),
+        UniformName::new("niri_curr_geo_to_prev_geo", UniformType::Matrix3x3),
+        UniformName::new("niri_curr_geo_to_next_geo", UniformType::Matrix3x3),
+        UniformName::new("niri_curr_geo_size", UniformType::_2f),
+        UniformName::new("niri_geo_to_tex_prev", UniformType::Matrix3x3),
+        UniformName::new("niri_geo_to_tex_next", UniformType::Matrix3x3),
+        UniformName::new("niri_progress", UniformType::_1f),
+        UniformName::new("niri_clamped_progress", UniformType::_1f),
+        UniformName::new("niri_corner_radius", UniformType::_4f),
+        UniformName::new("niri_clip_to_geometry", UniformType::_1f),
+    ];
+    if curve {
+        uniforms.push(UniformName::new("niri_curve_lut", UniformType::Matrix4x4));
+    }
+
+    ShaderProgram::compile(renderer, &program, &uniforms, &["niri_tex_prev", "niri_tex_next"])
 }
 
 pub fn set_custom_resize_program(renderer: &mut GlesRenderer, src: Option<&str>) {
     let program = if let Some(src) = src {
-        match compile_resize_program(renderer, src) {
+        match compile_resize_program(renderer, src, false) {
             Ok(program) => Some(program),
             Err(err) => {
                 warn!("error compiling custom resize shader: {err:?}");

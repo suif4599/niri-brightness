@@ -1157,10 +1157,18 @@ impl<W: LayoutElement> Tile<W> {
         // If we're resizing, try to render a shader, or a fallback.
         let mut pushed_resize = false;
         if let Some(resize) = &self.resize_animation {
+            // Compose the brightness curve into the resize shader. Fall back to the plain
+            // resize shader if the curve variant failed to compile (a missing program would
+            // make the window invisible).
+            let curve_lut =
+                curve_lut.filter(|_| ResizeRenderElement::has_curve_shader(ctx.renderer));
+
             if ResizeRenderElement::has_shader(ctx.renderer) {
                 let mut ctx = ctx.as_gles();
 
                 if let Some(texture_from) = resize.snapshot.texture(ctx.r(), scale) {
+                    // These elements must stay unwrapped by the brightness curve: it is applied
+                    // once by the resize shader on the crossfaded result.
                     let mut window_elements = Vec::new();
                     self.window.render_normal(
                         ctx.r(),
@@ -1206,6 +1214,7 @@ impl<W: LayoutElement> Tile<W> {
                             radius,
                             clip_to_geometry,
                             win_alpha,
+                            curve_lut,
                         );
 
                         // We're drawing the resize shader, not the offscreen directly.

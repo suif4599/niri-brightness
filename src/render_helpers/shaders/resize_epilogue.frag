@@ -5,6 +5,8 @@ void main() {
 
     vec4 color = resize_color(coords_curr_geo, size_curr_geo);
 
+    color = postprocess(color);
+
     if (niri_clip_to_geometry == 1.0) {
         if (coords_curr_geo.x < 0.0 || 1.0 < coords_curr_geo.x
                 || coords_curr_geo.y < 0.0 || 1.0 < coords_curr_geo.y) {
