@@ -28,3 +28,4 @@ uniform float niri_alpha;
 uniform float niri_scale;
 
 float niri_rounding_alpha(vec2 coords, vec2 size, vec4 corner_radius);
+vec4 postprocess(vec4 color);

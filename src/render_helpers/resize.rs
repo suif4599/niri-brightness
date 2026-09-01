@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use glam::{Mat3, Vec2};
+use glam::{Mat3, Mat4, Vec2};
 use niri_config::CornerRadius;
 use smithay::backend::renderer::element::{Element, Id, Kind, RenderElement, UnderlyingStorage};
 use smithay::backend::renderer::gles::{GlesError, GlesFrame, GlesRenderer, GlesTexture, Uniform};
@@ -13,7 +13,7 @@ use smithay::utils::{Buffer, Logical, Physical, Rectangle, Scale, Size, Transfor
 
 use super::renderer::{AsGlesFrame, NiriRenderer};
 use super::shader_element::ShaderRenderElement;
-use super::shaders::{mat3_uniform, ProgramType, Shaders};
+use super::shaders::{mat3_uniform, mat4_uniform, ProgramType, Shaders};
 use crate::backend::tty::{TtyFrame, TtyRenderer, TtyRendererError};
 
 #[derive(Debug)]
@@ -33,6 +33,7 @@ impl ResizeRenderElement {
         corner_radius: CornerRadius,
         clip_to_geometry: bool,
         result_alpha: f32,
+        curve_lut: Option<Mat4>,
     ) -> Self {
         let curr_geo = area;
 
@@ -86,25 +87,38 @@ impl ResizeRenderElement {
         let clip_to_geometry = if clip_to_geometry { 1. } else { 0. };
 
         // Create the shader.
+        //
+        // The curve LUT uniform is only passed when the curve variant of the program is
+        // used; passing a uniform that the program doesn't declare is a draw error.
+        let program = if curve_lut.is_some() {
+            ProgramType::ResizeCurve
+        } else {
+            ProgramType::Resize
+        };
+        let mut uniforms = vec![
+            mat3_uniform("niri_input_to_curr_geo", input_to_curr_geo),
+            mat3_uniform("niri_curr_geo_to_prev_geo", curr_geo_to_prev_geo),
+            mat3_uniform("niri_curr_geo_to_next_geo", curr_geo_to_next_geo),
+            Uniform::new("niri_curr_geo_size", curr_geo_size.to_array()),
+            mat3_uniform("niri_geo_to_tex_prev", geo_to_tex_prev),
+            mat3_uniform("niri_geo_to_tex_next", geo_to_tex_next),
+            Uniform::new("niri_progress", progress),
+            Uniform::new("niri_clamped_progress", clamped_progress),
+            Uniform::new("niri_corner_radius", <[f32; 4]>::from(corner_radius)),
+            Uniform::new("niri_clip_to_geometry", clip_to_geometry),
+        ];
+        if let Some(lut) = curve_lut {
+            uniforms.push(mat4_uniform("niri_curve_lut", lut));
+        }
+
         Self(
             ShaderRenderElement::new(
-                ProgramType::Resize,
+                program,
                 area.size,
                 None,
                 scale.x,
                 result_alpha,
-                Rc::new([
-                    mat3_uniform("niri_input_to_curr_geo", input_to_curr_geo),
-                    mat3_uniform("niri_curr_geo_to_prev_geo", curr_geo_to_prev_geo),
-                    mat3_uniform("niri_curr_geo_to_next_geo", curr_geo_to_next_geo),
-                    Uniform::new("niri_curr_geo_size", curr_geo_size.to_array()),
-                    mat3_uniform("niri_geo_to_tex_prev", geo_to_tex_prev),
-                    mat3_uniform("niri_geo_to_tex_next", geo_to_tex_next),
-                    Uniform::new("niri_progress", progress),
-                    Uniform::new("niri_clamped_progress", clamped_progress),
-                    Uniform::new("niri_corner_radius", <[f32; 4]>::from(corner_radius)),
-                    Uniform::new("niri_clip_to_geometry", clip_to_geometry),
-                ]),
+                uniforms.into(),
                 HashMap::from([
                     (String::from("niri_tex_prev"), texture_prev),
                     (String::from("niri_tex_next"), texture_next),
@@ -118,6 +132,12 @@ impl ResizeRenderElement {
     pub fn has_shader(renderer: &mut impl NiriRenderer) -> bool {
         Shaders::get(renderer)
             .program(ProgramType::Resize)
+            .is_some()
+    }
+
+    pub fn has_curve_shader(renderer: &mut impl NiriRenderer) -> bool {
+        Shaders::get(renderer)
+            .program(ProgramType::ResizeCurve)
             .is_some()
     }
 }

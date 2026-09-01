@@ -1003,7 +1003,7 @@ Notes:
 
 - The curve applies to the window's own surfaces, including its popups (dropdown and context menus), but not to its border, focus ring, or shadow.
 - It also shows up in screenshots and full-output screencasts (but not single-window screencasts).
-- During interactive resize animations the curve is temporarily not applied.
+- The curve is also applied during resize animations (composed into the resize shader); this means that while such a window is resizing, a custom `window-resize` `custom-shader` is not used for it.
 - Windows with this rule cannot use direct scanout (same as with `clip-to-geometry`).
 
 #### `background-effect`
