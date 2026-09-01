@@ -1112,6 +1112,38 @@ impl<W: LayoutElement> Tile<W> {
             .geometry_corner_radius()
             .scaled_by(1. - expanded_progress as f32);
 
+        // Brightness curve for the window's own contents (including popups).
+        let curve_lut = rules.brightness_curve;
+        let curve_shader = if curve_lut.is_some() {
+            ClippedSurfaceRenderElement::curve_shader(ctx.renderer).cloned()
+        } else {
+            None
+        };
+
+        // Wrap the element so that it renders through the brightness curve
+        // program without visually clipping anything: pass the element's own
+        // geometry and no corner radius.
+        let wrap_curve = |elem: LayoutElementRenderElement<R>| -> TileRenderElement<R> {
+            match elem {
+                LayoutElementRenderElement::Wayland(elem) => {
+                    if let Some((program, lut)) = curve_shader.as_ref().zip(curve_lut) {
+                        let elem_geo = elem.geometry(scale).to_f64().to_logical(scale);
+                        return ClippedSurfaceRenderElement::new(
+                            elem,
+                            scale,
+                            elem_geo,
+                            program.clone(),
+                            CornerRadius::default(),
+                        )
+                        .with_brightness_curve_lut(lut)
+                        .into();
+                    }
+                    LayoutElementRenderElement::Wayland(elem).into()
+                }
+                elem => elem.into(),
+            }
+        };
+
         // Popups go on top, whether it's resize or not.
         self.window.render_popups(
             ctx.r(),
@@ -1119,7 +1151,7 @@ impl<W: LayoutElement> Tile<W> {
             scale,
             win_alpha,
             xray_pos,
-            &mut |elem| push(elem.into()),
+            &mut |elem| push(wrap_curve(elem)),
         );
 
         // If we're resizing, try to render a shader, or a fallback.
@@ -1214,20 +1246,28 @@ impl<W: LayoutElement> Tile<W> {
                     if clip_to_geometry {
                         if let Some(shader) = clip_shader.clone() {
                             if ClippedSurfaceRenderElement::will_clip(&elem, scale, geo, radius) {
-                                return ClippedSurfaceRenderElement::new(
+                                // Combine the clipping with the brightness curve program.
+                                let (program, lut) = match (curve_shader.clone(), curve_lut) {
+                                    (Some(program), Some(lut)) => (program, Some(lut)),
+                                    _ => (shader, None),
+                                };
+                                let mut clipped = ClippedSurfaceRenderElement::new(
                                     elem,
                                     scale,
                                     geo,
-                                    shader.clone(),
+                                    program,
                                     radius,
-                                )
-                                .into();
+                                );
+                                if let Some(lut) = lut {
+                                    clipped = clipped.with_brightness_curve_lut(lut);
+                                }
+                                return clipped.into();
                             }
                         }
                     }
 
-                    // Otherwise, render it normally.
-                    LayoutElementRenderElement::Wayland(elem).into()
+                    // Otherwise, apply just the brightness curve if any.
+                    wrap_curve(LayoutElementRenderElement::Wayland(elem))
                 }
                 LayoutElementRenderElement::SolidColor(elem) => {
                     // In this branch we're rendering a blocked-out window with a solid

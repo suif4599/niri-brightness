@@ -121,6 +121,10 @@ window-rule {
         }
     }
 
+    brightness-curve {
+        points 0.25 0.14 0.5 0.38 0.75 0.72
+    }
+
     min-width 100
     max-width 200
     min-height 300
@@ -975,6 +979,32 @@ window-rule {
 https://github.com/user-attachments/assets/3f4cb1a4-40b2-4766-98b7-eec014c19509
 
 </video>
+
+#### `brightness-curve`
+
+Apply a custom brightness curve to this window's own contents.
+
+This is useful for apps that don't support dark mode: a curve that darkens midtones more than shadows and highlights makes light-themed apps much more comfortable at night, without flattening the whole window the way a plain opacity or brightness reduction would.
+
+The curve is defined by `points`: a flat list of `x y` pairs (up to 8 points), interpolated with a monotone cubic spline. `x` must be strictly increasing and both `x` and `y` must be within `[0, 1]`. The `(0, 0)` and `(1, 1)` endpoints are added automatically when missing, so pure black stays black and pure white stays white.
+
+```kdl
+window-rule {
+    match app-id=r#"^com\.example\.App$"#
+
+    brightness-curve {
+        // input -> output control points
+        points 0.25 0.14 0.5 0.38 0.75 0.72
+    }
+}
+```
+
+Notes:
+
+- The curve applies to the window's own surfaces, including its popups (dropdown and context menus), but not to its border, focus ring, or shadow.
+- It also shows up in screenshots and full-output screencasts (but not single-window screencasts).
+- During interactive resize animations the curve is temporarily not applied.
+- Windows with this rule cannot use direct scanout (same as with `clip-to-geometry`).
 
 #### `background-effect`
 

@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use glam::Mat3;
+use glam::{Mat3, Mat4};
 use smithay::backend::renderer::gles::{
     GlesError, GlesFrame, GlesRenderer, GlesTexProgram, Uniform, UniformName, UniformType,
     UniformValue,
@@ -14,6 +14,7 @@ pub struct Shaders {
     pub border: Option<ShaderProgram>,
     pub shadow: Option<ShaderProgram>,
     pub clipped_surface: Option<GlesTexProgram>,
+    pub brightness_curve: Option<GlesTexProgram>,
     pub postprocess_and_clip: Option<GlesTexProgram>,
     pub resize: Option<ShaderProgram>,
     pub gradient_fade: Option<GlesTexProgram>,
@@ -104,6 +105,26 @@ impl Shaders {
             })
             .ok();
 
+        let brightness_curve = renderer
+            .compile_custom_texture_shader(
+                concat!(
+                    include_str!("clipped_surface.frag"),
+                    include_str!("rounding_alpha.frag"),
+                    include_str!("brightness_curve.frag"),
+                ),
+                &[
+                    UniformName::new("niri_scale", UniformType::_1f),
+                    UniformName::new("geo_size", UniformType::_2f),
+                    UniformName::new("corner_radius", UniformType::_4f),
+                    UniformName::new("input_to_geo", UniformType::Matrix3x3),
+                    UniformName::new("niri_curve_lut", UniformType::Matrix4x4),
+                ],
+            )
+            .map_err(|err| {
+                warn!("error compiling brightness curve shader: {err:?}");
+            })
+            .ok();
+
         let postprocess_and_clip = renderer
             .compile_custom_texture_shader(
                 concat!(
@@ -152,6 +173,7 @@ impl Shaders {
             border,
             shadow,
             clipped_surface,
+            brightness_curve,
             postprocess_and_clip,
             resize,
             gradient_fade,
@@ -357,6 +379,16 @@ pub fn mat3_uniform(name: &str, mat: Mat3) -> Uniform<'_> {
     Uniform::new(
         name,
         UniformValue::Matrix3x3 {
+            matrices: vec![mat.to_cols_array()],
+            transpose: false,
+        },
+    )
+}
+
+pub fn mat4_uniform(name: &str, mat: Mat4) -> Uniform<'_> {
+    Uniform::new(
+        name,
+        UniformValue::Matrix4x4 {
             matrices: vec![mat.to_cols_array()],
             transpose: false,
         },

@@ -126,6 +126,9 @@
             ''
             + lib.optionalString withSystemd ''
               install -Dm755 resources/niri-session $out/bin/niri-session
+              # NixOS's systemd.packages collects user units from lib/systemd/user
+              # only; installing to share/systemd/user (as upstream's flake does)
+              # leaves the NixOS module generating an ExecStart-less niri.service.
               install -Dm644 resources/niri{.service,-shutdown.target} -t $out/lib/systemd/user
             '';
 

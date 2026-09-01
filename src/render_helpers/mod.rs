@@ -29,6 +29,7 @@ use crate::render_helpers::xray::Xray;
 pub mod background_effect;
 pub mod blur;
 pub mod border;
+pub mod brightness_curve;
 pub mod clipped_surface;
 pub mod damage;
 pub mod debug;
