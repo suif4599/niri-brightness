@@ -83,6 +83,20 @@ pub struct WindowRule {
     pub background_effect: BackgroundEffectRule,
     #[knuffel(child, default)]
     pub popups: PopupsRule,
+    #[knuffel(child)]
+    pub brightness_curve: Option<BrightnessCurve>,
+}
+
+/// Per-window brightness curve applied to the window's own contents.
+#[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+pub struct BrightnessCurve {
+    /// Control points as a flat list of `x y` pairs (between 2 and 8 points).
+    ///
+    /// `x` must be strictly increasing and within `[0, 1]`, `y` must be within
+    /// `[0, 1]`. The `(0, 0)` and `(1, 1)` endpoints are added automatically
+    /// when not given explicitly.
+    #[knuffel(child, unwrap(arguments))]
+    pub points: Vec<FloatOrInt<0, 1>>,
 }
 
 /// Rules for popup surfaces.

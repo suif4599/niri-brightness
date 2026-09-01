@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 
+use glam::Mat4;
 use niri_config::utils::MergeWith as _;
 use niri_config::window_rule::{Match, OnXdgActivate, WindowRule};
 use niri_config::{
@@ -131,6 +132,9 @@ pub struct ResolvedWindowRules {
 
     /// Rules for this window's popups.
     pub popups: ResolvedPopupsRules,
+
+    /// Baked brightness curve LUT for this window's own contents, if any.
+    pub brightness_curve: Option<Mat4>,
 }
 
 impl<'a> WindowRef<'a> {
@@ -321,6 +325,11 @@ impl ResolvedWindowRules {
                     .merge_with(&rule.background_effect);
 
                 resolved.popups.merge_with(&rule.popups);
+
+                resolved.brightness_curve = rule
+                    .brightness_curve
+                    .as_ref()
+                    .and_then(crate::render_helpers::brightness_curve::bake_lut);
             }
 
             resolved.open_on_output = open_on_output.map(|x| x.to_owned());

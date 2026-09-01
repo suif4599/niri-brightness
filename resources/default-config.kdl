@@ -347,6 +347,17 @@ window-rule {
     clip-to-geometry true
 }
 
+// Example: soften a light-themed app that has no dark mode with a custom
+// brightness curve.
+// (This example rule is commented out with a "/-" in front.)
+/-window-rule {
+    match app-id=r#"^com\.example\.App$"#
+
+    brightness-curve {
+        points 0.25 0.14 0.5 0.38 0.75 0.72
+    }
+}
+
 binds {
     // Keys consist of modifiers separated by + signs, followed by an XKB key name
     // in the end. To find an XKB name for a particular key, you may use a program

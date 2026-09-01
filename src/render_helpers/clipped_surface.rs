@@ -1,4 +1,4 @@
-use glam::{Mat3, Vec2};
+use glam::{Mat3, Mat4, Vec2};
 use niri_config::CornerRadius;
 use smithay::backend::renderer::buffer_y_inverted;
 use smithay::backend::renderer::element::surface::WaylandSurfaceRenderElement;
@@ -12,7 +12,7 @@ use smithay::utils::{Buffer, Logical, Physical, Point, Rectangle, Scale, Size, T
 
 use super::damage::ExtraDamage;
 use super::renderer::{AsGlesFrame as _, NiriRenderer};
-use super::shaders::{mat3_uniform, Shaders};
+use super::shaders::{mat3_uniform, mat4_uniform, Shaders};
 use crate::backend::tty::{TtyFrame, TtyRenderer, TtyRendererError};
 
 #[derive(Debug)]
@@ -22,6 +22,7 @@ pub struct ClippedSurfaceRenderElement<R: NiriRenderer> {
     corner_radius: CornerRadius,
     geometry: Rectangle<f64, Logical>,
     scale: f32,
+    brightness_curve_lut: Option<Mat4>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -44,7 +45,14 @@ impl<R: NiriRenderer> ClippedSurfaceRenderElement<R> {
             corner_radius,
             geometry,
             scale: scale.x as f32,
+            brightness_curve_lut: None,
         }
+    }
+
+    /// Draw the element through the brightness curve described by the LUT.
+    pub fn with_brightness_curve_lut(mut self, lut: Mat4) -> Self {
+        self.brightness_curve_lut = Some(lut);
+        self
     }
 
     fn compute_uniforms(&self) -> Vec<Uniform<'static>> {
@@ -91,16 +99,24 @@ impl<R: NiriRenderer> ClippedSurfaceRenderElement<R> {
 
         let geo_size = (self.geometry.size.w as f32, self.geometry.size.h as f32);
 
-        vec![
+        let mut uniforms = vec![
             Uniform::new("niri_scale", self.scale),
             Uniform::new("geo_size", geo_size),
             Uniform::new("corner_radius", <[f32; 4]>::from(self.corner_radius)),
             mat3_uniform("input_to_geo", input_to_geo),
-        ]
+        ];
+        if let Some(lut) = self.brightness_curve_lut {
+            uniforms.push(mat4_uniform("niri_curve_lut", lut));
+        }
+        uniforms
     }
 
     pub fn shader(renderer: &mut R) -> Option<&GlesTexProgram> {
         Shaders::get(renderer).clipped_surface.as_ref()
+    }
+
+    pub fn curve_shader(renderer: &mut R) -> Option<&GlesTexProgram> {
+        Shaders::get(renderer).brightness_curve.as_ref()
     }
 
     pub fn will_clip(
