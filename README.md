@@ -2,9 +2,7 @@
 
 Personal branch of my [niri fork](https://github.com/suif4599/niri-brightness) for miscellaneous unpublished features
 
-## Features
-
-### Per-device window-rule scroll factor
+## Per-device window-rule scroll factor
 
 ```kdl
 window-rule {
@@ -14,6 +12,10 @@ window-rule {
     scroll-factor touchpad=0.5
 }
 ```
+
+## Maintenance
+
+This fork is maintained in my spare time. It is synced with upstream roughly once a month, so new upstream releases may take a while to land here. If you would like an update (for example, a newer upstream release or a fix) to land sooner, feel free to open an issue to ask for it — it will be picked up whenever I have some spare time.
 
 ## License
 
