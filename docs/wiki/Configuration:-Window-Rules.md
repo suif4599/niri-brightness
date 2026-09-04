@@ -984,9 +984,11 @@ https://github.com/user-attachments/assets/3f4cb1a4-40b2-4766-98b7-eec014c19509
 
 Apply a custom brightness curve to this window's own contents.
 
+The curve remaps the pixel's Oklab lightness: the mapping is perceptually uniform and colors keep their hue. Saturated colors whose remapped lightness no longer fits in the sRGB gamut get their chroma reduced to fit.
+
 This is useful for apps that don't support dark mode: a curve that darkens midtones more than shadows and highlights makes light-themed apps much more comfortable at night, without flattening the whole window the way a plain opacity or brightness reduction would.
 
-The curve is defined by `points`: a flat list of `x y` pairs (up to 8 points), interpolated with a monotone cubic spline. `x` must be strictly increasing and both `x` and `y` must be within `[0, 1]`. The `(0, 0)` and `(1, 1)` endpoints are added automatically when missing, so pure black stays black and pure white stays white.
+The curve is defined by `points`: a flat list of `x y` pairs (up to 8 points), interpolated with a monotone cubic spline. Both `x` and `y` are Oklab lightness values (for reference: black is 0, white is 1, mid-gray #808080 is about 0.6). `x` must be strictly increasing and both `x` and `y` must be within `[0, 1]`. The `(0, 0)` and `(1, 1)` endpoints are added automatically when missing, so pure black stays black and pure white stays white.
 
 ```kdl
 window-rule {

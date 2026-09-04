@@ -4,9 +4,10 @@ A fork of [niri](https://github.com/niri-wm/niri), the scrollable-tiling Wayland
 
 ## Feature: brightness curve
 
-The `brightness-curve` window rule applies a custom tone curve to a window's own contents. See the fork's [window rules documentation](docs/wiki/Configuration:-Window-Rules.md#brightness-curve) for the full details.
+The `brightness-curve` window rule applies a custom tone curve to a window's Oklab lightness, preserving hue and mapping brightness perceptually uniformly. Saturated colors that no longer fit the sRGB gamut get their chroma reduced to fit. See the fork's [window rules documentation](docs/wiki/Configuration:-Window-Rules.md#brightness-curve) for the full details.
 
-![comparison](assets/brightness-curve-comparison.png)
+![comparison](assets/brightness-curve-comparison-1.png)
+![comparison](assets/brightness-curve-comparison-2.png)
 
 Above: the left column is the original comic, the right column is the same comic rendered through the curve `y = c*x / (c + (1-c)*x)` with `c=0.6`.
 
