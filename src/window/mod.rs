@@ -2,7 +2,7 @@ use std::cmp::{max, min};
 
 use glam::Mat4;
 use niri_config::utils::MergeWith as _;
-use niri_config::window_rule::{Match, OnXdgActivate, WindowRule};
+use niri_config::window_rule::{Match, OnXdgActivate, WindowRule, WindowScrollFactor};
 use niri_config::{
     BackgroundEffect, BlockOutFrom, BorderRule, CornerRadius, FloatingPosition, PresetSize,
     ResolvedPopupsRules, ShadowRule, TabIndicatorRule,
@@ -118,8 +118,8 @@ pub struct ResolvedWindowRules {
     /// Whether to enable VRR on this window's primary output if it is on-demand.
     pub variable_refresh_rate: Option<bool>,
 
-    /// Multiplier for all scroll events sent to this window.
-    pub scroll_factor: Option<f64>,
+    /// Multiplier for all scroll events sent to this window, per device kind.
+    pub scroll_factor: Option<WindowScrollFactor>,
 
     /// Pinch gesture sensitivity for this window.
     pub pinch_sensitivity: Option<f64>,
@@ -311,7 +311,7 @@ impl ResolvedWindowRules {
                     resolved.variable_refresh_rate = Some(x);
                 }
                 if let Some(x) = rule.scroll_factor {
-                    resolved.scroll_factor = Some(x.0);
+                    resolved.scroll_factor.get_or_insert_default().merge_with(&x);
                 }
                 if let Some(x) = rule.pinch_sensitivity {
                     resolved.pinch_sensitivity = Some(x.0);

@@ -3532,6 +3532,12 @@ impl State {
             .map(|focused| self.niri.find_root_shell_surface(&focused))
             .and_then(|root| self.niri.layout.find_window_and_output(&root).unzip().0)
             .and_then(|window| window.rules().scroll_factor)
+            .map(|sf| match source {
+                AxisSource::Wheel => sf.mouse_factor(),
+                // Continuous events come from touchpad-like devices.
+                AxisSource::Finger | AxisSource::Continuous => sf.touchpad_factor(),
+                _ => 1.,
+            })
             .unwrap_or(1.);
 
         // Determine final scroll factors based on configuration

@@ -61,6 +61,7 @@ pub use crate::utils::FloatOrInt;
 use crate::utils::{expand_home_path, Flag, MergeWith as _};
 pub use crate::window_rule::{
     BrightnessCurve, FloatingPosition, OnXdgActivate, PopupsRule, RelativeTo, ResolvedPopupsRules, WindowRule,
+    WindowScrollFactor,
 };
 pub use crate::workspace::{Workspace, WorkspaceLayoutPart};
 
@@ -668,6 +669,41 @@ mod tests {
                 Some(OnXdgActivate::SetUrgent),
                 Some(OnXdgActivate::Focus),
             ]
+        );
+    }
+
+    #[test]
+    fn parse_window_rule_scroll_factor() {
+        let parsed = do_parse(
+            r#"
+            window-rule { scroll-factor 0.75; }
+            window-rule { scroll-factor mouse=0.5 touchpad=0.2; }
+            window-rule { scroll-factor 0.75 touchpad=0.2; }
+            "#,
+        );
+
+        assert_eq!(
+            parsed
+                .window_rules
+                .iter()
+                .map(|rule| rule.scroll_factor)
+                .collect::<Vec<_>>(),
+            vec![
+                Some(WindowScrollFactor {
+                    base: Some(FloatOrInt(0.75)),
+                    ..Default::default()
+                }),
+                Some(WindowScrollFactor {
+                    mouse: Some(FloatOrInt(0.5)),
+                    touchpad: Some(FloatOrInt(0.2)),
+                    ..Default::default()
+                }),
+                Some(WindowScrollFactor {
+                    base: Some(FloatOrInt(0.75)),
+                    touchpad: Some(FloatOrInt(0.2)),
+                    ..Default::default()
+                }),
+            ],
         );
     }
 
@@ -1984,7 +2020,6 @@ mod tests {
                             saturation: None,
                         },
                     },
-                    brightness_curve: None,
                 },
             ],
             binds: Binds(
