@@ -763,6 +763,17 @@ window-rule {
 }
 ```
 
+You can set different factors for mouse wheel and touchpad scrolling with the `mouse` and `touchpad` properties. A bare value applies to both.
+
+```kdl
+window-rule {
+    match app-id="firefox$"
+
+    // Slow down touchpad scrolling only.
+    scroll-factor touchpad=0.5
+}
+```
+
 #### `pinch-sensitivity`
 
 <sup>Since: next release</sup>

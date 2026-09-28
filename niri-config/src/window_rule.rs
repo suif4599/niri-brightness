@@ -73,8 +73,8 @@ pub struct WindowRule {
     pub default_column_display: Option<ColumnDisplay>,
     #[knuffel(child)]
     pub default_floating_position: Option<FloatingPosition>,
-    #[knuffel(child, unwrap(argument))]
-    pub scroll_factor: Option<FloatOrInt<0, 100>>,
+    #[knuffel(child)]
+    pub scroll_factor: Option<WindowScrollFactor>,
     #[knuffel(child, unwrap(argument))]
     pub pinch_sensitivity: Option<FloatOrInt<0, 100>>,
     #[knuffel(child, unwrap(argument))]
@@ -85,6 +85,38 @@ pub struct WindowRule {
     pub popups: PopupsRule,
     #[knuffel(child)]
     pub brightness_curve: Option<BrightnessCurve>,
+}
+
+#[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
+pub struct WindowScrollFactor {
+    #[knuffel(argument)]
+    pub base: Option<FloatOrInt<0, 100>>,
+    #[knuffel(property)]
+    pub mouse: Option<FloatOrInt<0, 100>>,
+    #[knuffel(property)]
+    pub touchpad: Option<FloatOrInt<0, 100>>,
+}
+
+impl MergeWith<WindowScrollFactor> for WindowScrollFactor {
+    fn merge_with(&mut self, part: &WindowScrollFactor) {
+        merge_clone_opt!((self, part), base, mouse, touchpad);
+    }
+}
+
+impl WindowScrollFactor {
+    pub fn mouse_factor(&self) -> f64 {
+        self.mouse.map(|x| x.0).unwrap_or_else(|| self.base_factor())
+    }
+
+    pub fn touchpad_factor(&self) -> f64 {
+        self.touchpad
+            .map(|x| x.0)
+            .unwrap_or_else(|| self.base_factor())
+    }
+
+    fn base_factor(&self) -> f64 {
+        self.base.map(|x| x.0).unwrap_or(1.)
+    }
 }
 
 /// Per-window brightness curve applied to the window's own contents.
