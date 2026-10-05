@@ -525,6 +525,9 @@ pub fn handle_msg(mut msg: Msg, json: bool, print_request: bool) -> anyhow::Resu
                     Event::TouchpadToggled { on } => {
                         println!("Touchpad enabled: {on}");
                     }
+                    Event::PointerMoved { t_ns, x, y } => {
+                        println!("Pointer moved: ({x}, {y}) at {t_ns}");
+                    }
                 }
             }
         }
