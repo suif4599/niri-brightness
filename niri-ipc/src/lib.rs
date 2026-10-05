@@ -1746,6 +1746,15 @@ pub enum Event {
         /// Stream ID of the stopped screencast.
         stream_id: u64,
     },
+    /// The pointer moved.
+    PointerMoved {
+        /// Time of the movement in nanoseconds according to `CLOCK_MONOTONIC`.
+        t_ns: u64,
+        /// The new pointer x coordinate in global logical coordinates.
+        x: f64,
+        /// The new pointer y coordinate in global logical coordinates.
+        y: f64,
+    },
 }
 
 impl From<Duration> for Timestamp {

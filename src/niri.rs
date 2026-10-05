@@ -990,6 +990,8 @@ impl State {
         );
         pointer.frame(self);
 
+        self.ipc_pointer_moved(location);
+
         self.niri.maybe_activate_pointer_constraint();
 
         // We do not show the pointer on programmatic or keyboard movement.

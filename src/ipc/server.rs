@@ -27,7 +27,7 @@ use smithay::input::pointer::{
 use smithay::reexports::calloop::generic::Generic;
 use smithay::reexports::calloop::{Interest, LoopHandle, Mode, PostAction};
 use smithay::reexports::rustix::fs::unlink;
-use smithay::utils::SERIAL_COUNTER;
+use smithay::utils::{Logical, Point, SERIAL_COUNTER};
 use smithay::wayland::shell::wlr_layer::{KeyboardInteractivity, Layer};
 
 use crate::backend::IpcOutputMap;
@@ -982,5 +982,25 @@ impl State {
         let event = Event::ScreenshotCaptured { path };
         state.apply(event.clone());
         server.send_event(event);
+    }
+
+    pub fn ipc_pointer_moved(&mut self, location: Point<f64, Logical>) {
+        let Some(server) = &self.niri.ipc_server else {
+            return;
+        };
+
+        let mut now = libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        // Raw clock read rather than Instant, so that the value is meaningful across processes.
+        unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut now) };
+        let t_ns = now.tv_sec as u64 * 1_000_000_000 + now.tv_nsec as u64;
+
+        server.send_event(Event::PointerMoved {
+            t_ns,
+            x: location.x,
+            y: location.y,
+        });
     }
 }
