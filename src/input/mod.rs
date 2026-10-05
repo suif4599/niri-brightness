@@ -3103,6 +3103,8 @@ impl State {
             }
         }
 
+        self.ipc_pointer_moved(new_pos);
+
         // Notify a11y.
         #[cfg(feature = "dbus")]
         self.a11y_notify_pointer_motion();
@@ -3201,6 +3203,8 @@ impl State {
                 self.niri.layout.dnd_update(output, pos_within_output);
             }
         }
+
+        self.ipc_pointer_moved(pos);
 
         // Notify a11y.
         #[cfg(feature = "dbus")]

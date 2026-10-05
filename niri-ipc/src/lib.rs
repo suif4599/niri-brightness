@@ -2041,6 +2041,15 @@ pub enum Event {
         /// Note that this only indicates the [`Action::ToggleTouchpad`] state. The touchpad can be
         /// disabled in hardware, or via `input { touchpad { off; } }`—this is not reflected here.
         on: bool,
+    }
+    /// The pointer moved.
+    PointerMoved {
+        /// Time of the movement in nanoseconds according to `CLOCK_MONOTONIC`.
+        t_ns: u64,
+        /// The new pointer x coordinate in global logical coordinates.
+        x: f64,
+        /// The new pointer y coordinate in global logical coordinates.
+        y: f64,
     },
 }
 
