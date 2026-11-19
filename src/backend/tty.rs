@@ -1144,9 +1144,17 @@ impl Tty {
     fn device_removed(&mut self, device_id: dev_t, niri: &mut Niri) {
         debug!("removing device: {device_id}");
 
-        let Ok(node) = DrmNode::from_dev_id(device_id) else {
-            warn!("error creating DrmNode");
-            return;
+        let node = match DrmNode::from_dev_id(device_id) {
+            Ok(node) => node,
+            // The sysfs node is gone by the time a driver unbind is processed; fall back to the
+            // dev_t stored on our device.
+            Err(_) => match self.devices.keys().find(|node| node.dev_id() == device_id) {
+                Some(node) => *node,
+                None => {
+                    warn!("error creating DrmNode");
+                    return;
+                }
+            },
         };
 
         if node.ty() != NodeType::Primary {
